@@ -1,0 +1,8 @@
+---
+branches:
+  - main
+projects:
+  PluginName:
+    path: ""
+    icon: "assets/icon.png"
+...

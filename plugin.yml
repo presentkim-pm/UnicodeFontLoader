@@ -1,0 +1,8 @@
+---
+name: PluginName
+main: kim\present\pluginname\Main
+version: 0.0.1
+api: [ 5.0.0 ]
+author: PresentKim
+description: Description of Plugin
+...
