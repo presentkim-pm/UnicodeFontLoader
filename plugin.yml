@@ -1,8 +1,9 @@
 ---
-name: PluginName
-main: kim\present\pluginname\Main
+name: UnicodeFontLoader
+main: kim\present\unicodefontloader\Main
 version: 0.0.1
 api: [ 5.0.0 ]
 author: PresentKim
-description: Description of Plugin
+description: Automatically load unicode font images and pack them into resourcepack!
+extensions: [ gd ]
 ...
