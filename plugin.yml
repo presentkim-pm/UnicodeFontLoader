@@ -1,7 +1,7 @@
 ---
 name: UnicodeFontLoader
 main: kim\present\unicodefontloader\Main
-version: 0.0.1
+version: 1.0.0
 api: [ 5.0.0 ]
 author: PresentKim
 description: Automatically load unicode font images and pack them into resourcepack!
