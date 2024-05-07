@@ -79,7 +79,7 @@ final class Main extends PluginBase{
                         "glyph_E1.png" => "glyph_E1"
                     ] as $resourcePath => $glyphName
             ){
-                $this->seperateGlyph($this->getResourcePath($resourcePath), Path::join($fontsDir, $glyphName));
+                $this->separateGlyph($this->getResourcePath($resourcePath), Path::join($fontsDir, $glyphName));
             }
         }
 
@@ -97,7 +97,7 @@ final class Main extends PluginBase{
             }
         }
 
-        // Seperate the all glyph group images into 256 pieces (16x16)
+        // separate the all glyph group images into 256 pieces (16x16)
         foreach(scandir($fontsDir) as $file){
             if(preg_match("/^glyph_[0-9A-F]{2}\.png$/i", $file) === 0){
                 continue;
@@ -110,16 +110,16 @@ final class Main extends PluginBase{
 
             $prefixHex = strtoupper(substr($file, 6, 2));
             try{
-                $this->seperateGlyph(
+                $this->separateGlyph(
                     $glyphPath,
                     Path::join($fontsDir, "glyph_$prefixHex")
                 );
             }catch(\Exception $e){
-                $this->getLogger()->error("Failed to seperate glyph group image : $glyphPath, " . $e->getMessage());
+                $this->getLogger()->error("Failed to separate glyph group image : $glyphPath, " . $e->getMessage());
                 continue;
             }
             unlink($glyphPath);
-            $this->getLogger()->info("Seperate glyph group image : $glyphPath");
+            $this->getLogger()->info("separate glyph group image : $glyphPath");
         }
 
         // Merge the all glyph pieces into a glyph group image
@@ -153,9 +153,9 @@ final class Main extends PluginBase{
     }
 
     /**
-     * Seperate the glyph image into 256 pieces (16x16)
+     * separate the glyph image into 256 pieces (16x16)
      */
-    private function seperateGlyph(string $glyphPath, string $glyphDir) : void{
+    private function separateGlyph(string $glyphPath, string $glyphDir) : void{
         $image = imagecreatefrompng($glyphPath);
 
         $pieces = [];
