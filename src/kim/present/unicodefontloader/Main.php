@@ -89,11 +89,11 @@ final class Main extends PluginBase{
             mkdir($this->cacheDir, 0777, true);
 
             foreach([
-                        "glyph_E0.png" => "ad4aeeba5a240136a0f599d0aabfdcb8",
-                        "glyph_E1.png" => "1f8c1a31a544a7052b12b037c77a5116"
-                    ] as $resourcePath => $cacheHash
+                        "glyph_E0.png" => "ad4aeeba5a240136a0f599d0aabfdcb8.png",
+                        "glyph_E1.png" => "1f8c1a31a544a7052b12b037c77a5116.png"
+                    ] as $resourcePath => $cachePath
             ){
-                copy($this->getResourcePath($resourcePath), Path::join($this->cacheDir, "$cacheHash.png"));
+                copy($this->getResourcePath($resourcePath), Path::join($this->cacheDir, $cachePath));
             }
         }
 
@@ -158,7 +158,6 @@ final class Main extends PluginBase{
     private function separateGlyph(string $glyphPath, string $glyphDir) : void{
         $image = imagecreatefrompng($glyphPath);
 
-        $pieces = [];
         $width = imagesx($image);
         $height = imagesy($image);
         if($width !== $height){
@@ -170,21 +169,25 @@ final class Main extends PluginBase{
             throw new \InvalidArgumentException("Glyph image size must be a multiple of 16 : $glyphPath");
         }
 
-        $separationLength = $width / 16;
+        if(!is_dir($glyphDir)){
+            mkdir($glyphDir, 0777, true);
+        }
+
+        $partSize = $width / 16;
         for($i = 0; $i < 16; $i++){
             for($j = 0; $j < 16; $j++){
                 $hasPixel = false;
 
-                $cropped = imagecreatetruecolor($separationLength, $separationLength);
-                imagealphablending($cropped, false);
-                imagesavealpha($cropped, true);
-                $transparent = imagecolorallocatealpha($cropped, 0, 0, 0, 127);
-                imagefill($cropped, 0, 0, $transparent);
+                $part = imagecreatetruecolor($partSize, $partSize);
+                imagealphablending($part, false);
+                imagesavealpha($part, true);
+                $transparent = imagecolorallocatealpha($part, 0, 0, 0, 127);
+                imagefill($part, 0, 0, $transparent);
 
-                $startX = $j * $separationLength;
-                $startY = $i * $separationLength;
-                for($x = 0; $x < $separationLength; $x++){
-                    for($y = 0; $y < $separationLength; $y++){
+                $startX = $j * $partSize;
+                $startY = $i * $partSize;
+                for($x = 0; $x < $partSize; $x++){
+                    for($y = 0; $y < $partSize; $y++){
                         $color = imagecolorat($image, $startX + $x, $startY + $y);
                         $rgba = imagecolorsforindex($image, $color);
                         $alpha = $rgba["alpha"];
@@ -197,18 +200,12 @@ final class Main extends PluginBase{
                 if(!$hasPixel){
                     continue;
                 }
-                imagecopy($cropped, $image, 0, 0, $startX, $startY, $separationLength, $separationLength);
-                $pieces[strtoupper(dechex($i) . dechex($j))] = $cropped;
-            }
-        }
-
-        if(!is_dir($glyphDir)){
-            mkdir($glyphDir, 0777, true);
-        }
-        foreach($pieces as $suffixHex => $glyph){
-            try{
-                imagepng($glyph, Path::join($glyphDir, "$suffixHex.png"));
-            }catch(\Exception){
+                $suffixHex = strtoupper(dechex($i * 16 + $j));
+                imagecopy($part, $image, 0, 0, $startX, $startY, $partSize, $partSize);
+                try{
+                    imagepng($part, Path::join($glyphDir, "$suffixHex.png"));
+                }catch(\Exception){
+                }
             }
         }
     }
@@ -245,26 +242,21 @@ final class Main extends PluginBase{
             $width = imagesx($pieceImg);
             $height = imagesy($pieceImg);
 
-            if($maxLength < $width){
-                $maxLength = $width;
-            }elseif($maxLength < $height){
-                $maxLength = $height;
-            }
-
+            $maxLength = max($maxLength, $width, $height);
             $pieces[] = [$pieceImg, hexdec($file[1]), hexdec($file[0]), $width, $height];
         }
 
-        $glyphImg = imagecreatetruecolor($maxLength * 16, $maxLength * 16);
-        imagealphablending($glyphImg, false);
-        imagesavealpha($glyphImg, true);
-        $transparent = imagecolorallocatealpha($glyphImg, 0, 0, 0, 127);
-        imagefill($glyphImg, 0, 0, $transparent);
+        $merged = imagecreatetruecolor($maxLength * 16, $maxLength * 16);
+        imagealphablending($merged, false);
+        imagesavealpha($merged, true);
+        $transparent = imagecolorallocatealpha($merged, 0, 0, 0, 127);
+        imagefill($merged, 0, 0, $transparent);
 
         foreach($pieces as [$pieceImg, $x, $y, $width, $height]){
-            imagecopy($glyphImg, $pieceImg, $x * $maxLength, $y * $maxLength, 0, 0, $width, $height);
+            imagecopy($merged, $pieceImg, $x * $maxLength, $y * $maxLength, 0, 0, $width, $height);
         }
 
-        imagepng($glyphImg, $cachePath);
+        imagepng($merged, $cachePath);
         return $cachePath;
     }
 
@@ -282,6 +274,9 @@ final class Main extends PluginBase{
             return null;
         }
         $cachePath = Path::join($this->cacheDir, "$uuid.zip");
+        if(is_file($cachePath)){
+            return $cachePath;
+        }
 
         $archive = new \ZipArchive();
         $archive->open($cachePath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
