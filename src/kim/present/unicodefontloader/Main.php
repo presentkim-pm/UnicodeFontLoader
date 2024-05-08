@@ -69,31 +69,14 @@ final class Main extends PluginBase{
 
     protected function onEnable() : void{
         $fontsDir = Path::join($this->getServer()->getDataPath(), "resource_packs/fonts");
+        $this->cacheDir = Path::join($this->getDataFolder(), ".cache");
 
         // Save default font glyphs
         if(!is_dir($fontsDir)){
             mkdir($fontsDir, 0777, true);
 
-            foreach([
-                        "glyph_E0.png" => "glyph_E0",
-                        "glyph_E1.png" => "glyph_E1"
-                    ] as $resourcePath => $glyphName
-            ){
-                $this->separateGlyph($this->getResourcePath($resourcePath), Path::join($fontsDir, $glyphName));
-            }
-        }
-
-        // Save cache of default font glyphs
-        $this->cacheDir = Path::join($this->getDataFolder(), ".cache");
-        if(!is_dir($this->cacheDir)){
-            mkdir($this->cacheDir, 0777, true);
-
-            foreach([
-                        "glyph_E0.png" => "ad4aeeba5a240136a0f599d0aabfdcb8.png",
-                        "glyph_E1.png" => "1f8c1a31a544a7052b12b037c77a5116.png"
-                    ] as $resourcePath => $cachePath
-            ){
-                copy($this->getResourcePath($resourcePath), Path::join($this->cacheDir, $cachePath));
+            foreach(["glyph_E0.png", "glyph_E1.png"] as $resourcePath){
+                copy($this->getResourcePath($resourcePath), Path::join($fontsDir, $resourcePath));
             }
         }
 
@@ -140,14 +123,11 @@ final class Main extends PluginBase{
             );
         }
 
+        // Build the addon with the glyph images
         $addonPath = $this->buildAddon($glyphPaths);
         $this->getLogger()->info("Load unicode font glyphs from : $fontsDir");
-        if($addonPath === null){
-            $this->getLogger()->info("All font files are equal to the default.");
-            $this->getLogger()->info("No need to register unicode font addon.");
-            return;
-        }
 
+        // Register the addon
         ResourcePackRegister::registerPack(new ZippedResourcePack($addonPath));
         $this->getLogger()->info("Registered unicode font addon : $addonPath");
     }
@@ -260,7 +240,7 @@ final class Main extends PluginBase{
         return $cachePath;
     }
 
-    private function buildAddon(array $glyphPaths) : string|null{
+    private function buildAddon(array $glyphPaths) : string{
         $hash = "";
         $glyphFiles = [];
         foreach($glyphPaths as $prefixHex => $glyphPath){
@@ -269,10 +249,6 @@ final class Main extends PluginBase{
         }
 
         $uuid = hash("md5", $hash);
-        if($uuid === "902010d76c4f95ba4f59a412b97b5327"){
-            // Ignore default font glyphs
-            return null;
-        }
         $cachePath = Path::join($this->cacheDir, "$uuid.zip");
         if(is_file($cachePath)){
             return $cachePath;
