@@ -202,7 +202,7 @@ final class Main extends PluginBase{
         $hash = "";
         $piecesFiles = [];
         foreach(scandir($glyphDir) as $file){
-            if(preg_match("/^[0-9A-F]{2}\.png$/i", $file) === 0){
+            if(preg_match("/^([0-9A-F]{1,2})\.png$/i", $file, $matches) === 0){
                 continue;
             }
 
@@ -212,7 +212,7 @@ final class Main extends PluginBase{
             }
 
             $hash .= hash_file("md5", $piecePath);
-            $piecesFiles[$file] = $piecePath;
+            $piecesFiles[$matches[1]] = $piecePath;
         }
         $hash = hash("md5", $hash);
         $cachePath = Path::join($this->cacheDir, "$hash.png");
@@ -221,14 +221,15 @@ final class Main extends PluginBase{
         }
 
         $pieces = [];
-        $maxLength = 16;
-        foreach($piecesFiles as $file => $piecePath){
+        $maxLength = 2;
+        foreach($piecesFiles as $hexCode => $piecePath){
             $pieceImg = imagecreatefrompng($piecePath);
             $width = imagesx($pieceImg);
             $height = imagesy($pieceImg);
 
             $maxLength = max($maxLength, $width, $height);
-            $pieces[] = [$pieceImg, hexdec($file[1]), hexdec($file[0]), $width, $height];
+            $hex = self::padHexCode((string) $hexCode);
+            $pieces[] = [$pieceImg, hexdec($hex[1]), hexdec($hex[0]), $width, $height];
         }
 
         $merged = imagecreatetruecolor($maxLength * 16, $maxLength * 16);
