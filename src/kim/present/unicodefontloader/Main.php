@@ -71,6 +71,11 @@ final class Main extends PluginBase{
         $fontsDir = Path::join($this->getServer()->getDataPath(), "resource_packs/fonts");
         $this->cacheDir = Path::join($this->getDataFolder(), ".cache");
 
+        // Create cache directory
+        if(!is_dir($this->cacheDir)){
+            mkdir($this->cacheDir, 0777, true);
+        }
+
         // Save default font glyphs
         if(!is_dir($fontsDir)){
             mkdir($fontsDir, 0777, true);
