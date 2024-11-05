@@ -185,7 +185,7 @@ final class Main extends PluginBase{
                 if(!$hasPixel){
                     continue;
                 }
-                $suffixHex = strtoupper(dechex($i * 16 + $j));
+                $suffixHex = self::padHexCode(dechex($i * 16 + $j));
                 imagecopy($part, $image, 0, 0, $startX, $startY, $partSize, $partSize);
                 try{
                     imagepng($part, Path::join($glyphDir, "$suffixHex.png"));
@@ -288,4 +288,9 @@ final class Main extends PluginBase{
 
         return $cachePath;
     }
+
+    private static function padHexCode(string $hexCode) : string{
+        return str_pad(strtoupper($hexCode), 2, "0", STR_PAD_LEFT);
+    }
+
 }
