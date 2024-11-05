@@ -239,7 +239,16 @@ final class Main extends PluginBase{
         imagefill($merged, 0, 0, $transparent);
 
         foreach($pieces as [$pieceImg, $x, $y, $width, $height]){
-            imagecopy($merged, $pieceImg, $x * $maxLength, $y * $maxLength, 0, 0, $width, $height);
+            imagecopy(
+                dst_image: $merged,
+                src_image: $pieceImg,
+                dst_x: $x * $maxLength + (int) max(0, ($maxLength - $width) / 2),
+                dst_y: $y * $maxLength + (int) max(0, ($maxLength - $height + 0.5) / 2),
+                src_x: 0,
+                src_y: 0,
+                src_width: $width,
+                src_height: $height
+            );
         }
 
         imagepng($merged, $cachePath);
