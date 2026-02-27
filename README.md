@@ -30,13 +30,13 @@ Ever felt bothered managing emoji fonts for the server?
 Or struggled finding emoji Unicode?
 Try this plugin!
 
-This plugin automatically bundles font files located in the `resource_packs/font` directory into a resourcepack.
+This plugin automatically bundles font files located in the `resource_packs/fonts` directory into a resourcepack.
 
 > For detailed information about image fonts, please
 > visit [bedrock.dev/concepts/emojis](https://wiki.bedrock.dev/concepts/emojis.html)
 
 :heavy_check_mark: Automatically generates font resource pack based on character images (
-like `resource_packs/font/glyph_XX/YY.png`).    
+like `resource_packs/fonts/glyph_XX/YY.png`).    
 :heavy_check_mark: Registers the generated resource pack on the server  
 :heavy_check_mark: Separates and applies existing font glyph files (`glyph_**.png`) on `resource_packs/` directory.  
 :heavy_check_mark: All results are cached to optimize repetitive tasks
@@ -48,10 +48,10 @@ like `resource_packs/font/glyph_XX/YY.png`).
 #### Usage
 
 1. When you apply the plugin and start the server, the default unicode font images are generated as examples in
-   the `resource_packs/font` directory.
-2. If a file named `font/glyph_XX/YY.png` exists, it will automatically be applied as the font corresponding to
+   the `resource_packs/fonts` directory.
+2. If a file named `resource_packs/fonts/glyph_XX/YY.png` exists, it will automatically be applied as the font corresponding to
    Unicode `U+XXYY`.
-3. If you want to convert existing font files to fit the plugin, simply place the 'glyph_XX.png' file in the 'font'
+3. If you want to convert existing font files to fit the plugin, simply place the 'glyph_XX.png' file in the 'fonts'
    directory, and it will be automatically converted.
 
 The automatic conversion and build feature runs once when the server starts up.
@@ -63,12 +63,12 @@ via [bedrock.dev](https://wiki.bedrock.dev/concepts/emojis.html#hexValue)
 or [unicodeconverter.net](https://unicodeconverter.net/).
 
 
-> exmaple) When server directory is configured as below,
+> example) When server directory is configured as below,
 >
 > ```bash
 > . # pmmp directory
 > ├── resource_packs
-> │   └── font
+> │   └── fonts
 > |       ├── glyph_E0
 > |       |   ├──── 01.png
 > |       |   ├──── 0A.png
@@ -85,7 +85,7 @@ or [unicodeconverter.net](https://unicodeconverter.net/).
 > ```bash
 > . # pmmp directory
 > ├── resource_packs
-> │   └── font
+> │   └── fonts
 > |       ├── glyph_E0
 > |       |   ├──── 01.png
 > |       |   ├──── 0A.png
