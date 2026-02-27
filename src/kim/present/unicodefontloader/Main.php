@@ -138,7 +138,12 @@ final class Main extends PluginBase{
     }
 
     /**
-     * separate the glyph image into 256 pieces (16x16)
+     * Splits a single glyph group image (e.g. glyph_E0.png) into 256 cell images (16x16 grid)
+     * and writes them under $glyphDir. Only cells that contain non-transparent pixels are saved.
+     *
+     * @param string $glyphPath Path to the source PNG (must be square, size multiple of 16).
+     * @param string $glyphDir Directory to write cell PNGs (XX.png) into.
+     * @throws \InvalidArgumentException When image is not square or size is not a multiple of 16.
      */
     private function separateGlyph(string $glyphPath, string $glyphDir) : void{
         $image = imagecreatefrompng($glyphPath);
@@ -149,7 +154,7 @@ final class Main extends PluginBase{
             throw new \InvalidArgumentException("Glyph image size must be square : $glyphPath");
         }
 
-        // throw error when $weight is have decimal point
+        // throw when $width is not a multiple of 16
         if($width % 16 !== 0){
             throw new \InvalidArgumentException("Glyph image size must be a multiple of 16 : $glyphPath");
         }
@@ -196,7 +201,11 @@ final class Main extends PluginBase{
     }
 
     /**
-     * Merge the 256 pieces (16x16) into a glyph image
+     * Merges 256 piece images (16x16 grid, filenames 00.png–FF.png) in $glyphDir into one PNG.
+     * Result is cached by content hash; returns cached path if unchanged.
+     *
+     * @param string $glyphDir Directory containing piece PNGs (e.g. glyph_E0/00.png, 01.png, ...).
+     * @return string Path to the cached merged PNG file.
      */
     private function mergeGlyph(string $glyphDir) : string{
         $hash = "";
@@ -255,6 +264,13 @@ final class Main extends PluginBase{
         return $cachePath;
     }
 
+    /**
+     * Builds a ZIP resource pack addon from merged glyph images and writes manifest.json.
+     * Output is cached by combined file hash; returns existing zip path when inputs are unchanged.
+     *
+     * @param array<string, string> $glyphPaths Map of prefix hex (e.g. "E0") => path to merged PNG.
+     * @return string Path to the cached .zip addon file.
+     */
     private function buildAddon(array $glyphPaths) : string{
         $hash = "";
         $glyphFiles = [];
@@ -299,6 +315,12 @@ final class Main extends PluginBase{
         return $cachePath;
     }
 
+    /**
+     * Pads a hex string to two uppercase characters (e.g. "a" -> "0A").
+     *
+     * @param string $hexCode One- or two-character hex code.
+     * @return string Two-character uppercase hex, zero-padded on the left.
+     */
     private static function padHexCode(string $hexCode) : string{
         return str_pad(strtoupper($hexCode), 2, "0", STR_PAD_LEFT);
     }
