@@ -1,8 +1,0 @@
----
-branches:
-  - main
-projects:
-  UnicodeFontLoader:
-    path: ""
-    icon: "assets/icon.png"
-...

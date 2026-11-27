@@ -20,20 +20,15 @@
  *  ( . .) ♥
  *  c(")(")
  *
- * @noinspection PhpUnused
  */
 
 declare(strict_types=1);
 
 namespace kim\present\unicodefontloader;
 
-use kim\present\register\resourcepack\ResourcePackRegister;
-use pocketmine\plugin\PluginBase;
-use pocketmine\resourcepacks\ZippedResourcePack;
 use Ramsey\Uuid\Uuid;
 use Symfony\Component\Filesystem\Path;
 
-use function copy;
 use function dechex;
 use function hash;
 use function hash_file;
@@ -41,7 +36,6 @@ use function hexdec;
 use function imagealphablending;
 use function imagecolorallocatealpha;
 use function imagecolorat;
-use function imagecolorsforindex;
 use function imagecopy;
 use function imagecreatefrompng;
 use function imagecreatetruecolor;
@@ -50,91 +44,51 @@ use function imagepng;
 use function imagesavealpha;
 use function imagesx;
 use function imagesy;
+use function intdiv;
 use function is_dir;
 use function is_file;
 use function json_encode;
+use function max;
 use function mkdir;
 use function preg_match;
+use function rename;
 use function scandir;
+use function str_pad;
 use function strtoupper;
-use function substr;
 use function unlink;
 
+use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
+use const STR_PAD_LEFT;
 
-final class Main extends PluginBase{
+/**
+ * Image and archive work of the plugin : separates a glyph group image into cells, merges cells back into
+ * a glyph group image and packs the glyph group images into a resource pack archive.
+ */
+final class FontPackBuilder{
 
-    private string $cacheDir;
+    private function __construct(){
+        // NOOP
+    }
 
-    protected function onEnable() : void{
-        $fontsDir = Path::join($this->getServer()->getDataPath(), "resource_packs/fonts");
-        $this->cacheDir = Path::join($this->getDataFolder(), ".cache");
-
-        // Create cache directory
-        if(!is_dir($this->cacheDir)){
-            mkdir($this->cacheDir, 0777, true);
+    /**
+     * Lists the entries of the directory, without "." and "..".
+     *
+     * @return string[]
+     */
+    public static function listDirectory(string $directory) : array{
+        $entries = @scandir($directory);
+        if($entries === false){
+            return [];
         }
-
-        // Save default font glyphs
-        if(!is_dir($fontsDir)){
-            mkdir($fontsDir, 0777, true);
-
-            foreach(["glyph_E0.png", "glyph_E1.png"] as $resourcePath){
-                copy($this->getResourcePath($resourcePath), Path::join($fontsDir, $resourcePath));
+        $result = [];
+        foreach($entries as $entry){
+            if($entry !== "." && $entry !== ".."){
+                $result[] = $entry;
             }
         }
-
-        // separate the all glyph group images into 256 pieces (16x16)
-        foreach(scandir($fontsDir) as $file){
-            if(preg_match("/^glyph_[0-9A-F]{2}\.png$/i", $file) === 0){
-                continue;
-            }
-
-            $glyphPath = Path::join($fontsDir, $file);
-            if(!is_file($glyphPath)){
-                continue;
-            }
-
-            $prefixHex = strtoupper(substr($file, 6, 2));
-            try{
-                $this->separateGlyph(
-                    $glyphPath,
-                    Path::join($fontsDir, "glyph_$prefixHex")
-                );
-            }catch(\Exception $e){
-                $this->getLogger()->error("Failed to separate glyph group image : $glyphPath, " . $e->getMessage());
-                continue;
-            }
-            unlink($glyphPath);
-            $this->getLogger()->info("separate glyph group image : $glyphPath");
-        }
-
-        // Merge the all glyph pieces into a glyph group image
-        $glyphPaths = [];
-        foreach(scandir($fontsDir) as $file){
-            if(preg_match("/^glyph_[0-9A-F]{2}$/i", $file) === 0){
-                continue;
-            }
-
-            $glyphDir = Path::join($fontsDir, $file);
-            if(!is_dir($glyphDir)){
-                continue;
-            }
-
-            $prefixHex = strtoupper(substr($file, 6, 2));
-            $glyphPaths[$prefixHex] = $this->mergeGlyph(
-                $glyphDir
-            );
-        }
-
-        // Build the addon with the glyph images
-        $addonPath = $this->buildAddon($glyphPaths);
-        $this->getLogger()->info("Load unicode font glyphs from : $fontsDir");
-
-        // Register the addon
-        ResourcePackRegister::registerPack(new ZippedResourcePack($addonPath));
-        $this->getLogger()->info("Registered unicode font addon : $addonPath");
+        return $result;
     }
 
     /**
@@ -145,10 +99,13 @@ final class Main extends PluginBase{
      * @param string $glyphDir  Directory to write cell PNGs (XX.png) into.
      *
      * @throws \InvalidArgumentException When image is not square or size is not a multiple of 16.
-     * @throws \RuntimeException When writing a cell PNG fails.
+     * @throws \RuntimeException When reading the image or writing a cell PNG fails.
      */
-    private function separateGlyph(string $glyphPath, string $glyphDir) : void{
-        $image = imagecreatefrompng($glyphPath);
+    public static function separateGlyph(string $glyphPath, string $glyphDir) : void{
+        $image = @imagecreatefrompng($glyphPath);
+        if($image === false){
+            throw new \RuntimeException("Failed to read glyph image : $glyphPath");
+        }
 
         $width = imagesx($image);
         $height = imagesy($image);
@@ -165,35 +122,33 @@ final class Main extends PluginBase{
             mkdir($glyphDir, 0777, true);
         }
 
-        $partSize = $width / 16;
+        $partSize = intdiv($width, 16);
         for($i = 0; $i < 16; $i++){
             for($j = 0; $j < 16; $j++){
-                $hasPixel = false;
-
-                $part = imagecreatetruecolor($partSize, $partSize);
-                imagealphablending($part, false);
-                imagesavealpha($part, true);
-                $transparent = imagecolorallocatealpha($part, 0, 0, 0, 127);
-                imagefill($part, 0, 0, $transparent);
-
                 $startX = $j * $partSize;
                 $startY = $i * $partSize;
-                for($x = 0; $x < $partSize; $x++){
+
+                $hasPixel = false;
+                for($x = 0; $x < $partSize && !$hasPixel; $x++){
                     for($y = 0; $y < $partSize; $y++){
-                        $color = imagecolorat($image, $startX + $x, $startY + $y);
-                        $rgba = imagecolorsforindex($image, $color);
-                        $alpha = $rgba["alpha"];
-                        if($alpha < 0x7f){
+                        // the alpha of a GD color is 0 (opaque) to 127 (fully transparent)
+                        if(((imagecolorat($image, $startX + $x, $startY + $y) >> 24) & 0x7f) < 0x7f){
                             $hasPixel = true;
-                            break 2;
+                            break;
                         }
                     }
                 }
                 if(!$hasPixel){
                     continue;
                 }
-                $suffixHex = self::padHexCode(dechex($i * 16 + $j));
+
+                $part = imagecreatetruecolor($partSize, $partSize);
+                imagealphablending($part, false);
+                imagesavealpha($part, true);
+                imagefill($part, 0, 0, imagecolorallocatealpha($part, 0, 0, 0, 127));
                 imagecopy($part, $image, 0, 0, $startX, $startY, $partSize, $partSize);
+
+                $suffixHex = self::padHexCode(dechex($i * 16 + $j));
                 $outPath = Path::join($glyphDir, "$suffixHex.png");
                 if(!imagepng($part, $outPath)){
                     throw new \RuntimeException("Failed to write glyph piece: $outPath");
@@ -207,13 +162,16 @@ final class Main extends PluginBase{
      * Result is cached by content hash; returns cached path if unchanged.
      *
      * @param string $glyphDir Directory containing piece PNGs (e.g. glyph_E0/00.png, 01.png, ...).
+     * @param string $cacheDir Directory to write the merged PNG into.
      *
      * @return string Path to the cached merged PNG file.
+     *
+     * @throws \RuntimeException When reading a piece or writing the merged PNG fails.
      */
-    private function mergeGlyph(string $glyphDir) : string{
+    public static function mergeGlyph(string $glyphDir, string $cacheDir) : string{
         $hash = "";
         $piecesFiles = [];
-        foreach(scandir($glyphDir) as $file){
+        foreach(self::listDirectory($glyphDir) as $file){
             if(preg_match("/^([0-9A-F]{1,2})\.png$/i", $file, $matches) === 0){
                 continue;
             }
@@ -223,11 +181,13 @@ final class Main extends PluginBase{
                 continue;
             }
 
-            $hash .= hash_file("md5", $piecePath);
-            $piecesFiles[$matches[1]] = $piecePath;
+            // The position of the piece is a part of the result, so it is a part of the hash
+            $hex = self::padHexCode($matches[1]);
+            $hash .= $hex . hash_file("md5", $piecePath);
+            $piecesFiles[$hex] = $piecePath;
         }
         $hash = hash("md5", $hash);
-        $cachePath = Path::join($this->cacheDir, "$hash.png");
+        $cachePath = Path::join($cacheDir, "$hash.png");
         if(is_file($cachePath)){
             return $cachePath;
         }
@@ -235,21 +195,23 @@ final class Main extends PluginBase{
         // When no piece files are found, we still create a minimal cached PNG (empty 32x32) and return its path.
         $pieces = [];
         $maxLength = 2;
-        foreach($piecesFiles as $hexCode => $piecePath){
-            $pieceImg = imagecreatefrompng($piecePath);
+        foreach($piecesFiles as $hexKey => $piecePath){
+            $hex = (string) $hexKey; // PHP turns a numeric string key such as "21" into an int
+            $pieceImg = @imagecreatefrompng($piecePath);
+            if($pieceImg === false){
+                throw new \RuntimeException("Failed to read glyph piece : $piecePath");
+            }
             $width = imagesx($pieceImg);
             $height = imagesy($pieceImg);
 
             $maxLength = max($maxLength, $width, $height);
-            $hex = self::padHexCode((string) $hexCode);
-            $pieces[] = [$pieceImg, hexdec($hex[1]), hexdec($hex[0]), $width, $height];
+            $pieces[] = [$pieceImg, (int) hexdec($hex[1]), (int) hexdec($hex[0]), $width, $height];
         }
 
         $merged = imagecreatetruecolor($maxLength * 16, $maxLength * 16);
         imagealphablending($merged, false);
         imagesavealpha($merged, true);
-        $transparent = imagecolorallocatealpha($merged, 0, 0, 0, 127);
-        imagefill($merged, 0, 0, $transparent);
+        imagefill($merged, 0, 0, imagecolorallocatealpha($merged, 0, 0, 0, 127));
 
         foreach($pieces as [$pieceImg, $x, $y, $width, $height]){
             imagecopy(
@@ -264,7 +226,12 @@ final class Main extends PluginBase{
             );
         }
 
-        imagepng($merged, $cachePath);
+        // Write to a temporary file first, so that an interrupted write never leaves a broken cache file
+        $tmpPath = "$cachePath.tmp";
+        if(!imagepng($merged, $tmpPath) || !rename($tmpPath, $cachePath)){
+            @unlink($tmpPath);
+            throw new \RuntimeException("Failed to write merged glyph image : $cachePath");
+        }
         return $cachePath;
     }
 
@@ -272,50 +239,66 @@ final class Main extends PluginBase{
      * Builds a ZIP resource pack addon from merged glyph images and writes manifest.json.
      * Output is cached by combined file hash; returns existing zip path when inputs are unchanged.
      *
-     * @param array<string, string> $glyphPaths Map of prefix hex (e.g. "E0") => path to merged PNG.
+     * @param array<string|int, string> $glyphPaths Map of prefix hex (e.g. "E0") => path to merged PNG.
+     * @param string                    $cacheDir   Directory to write the zip into.
      *
      * @return string Path to the cached .zip addon file.
+     *
+     * @throws \RuntimeException When the archive could not be written.
      */
-    private function buildAddon(array $glyphPaths) : string{
+    public static function buildAddon(array $glyphPaths, string $cacheDir) : string{
         $hash = "";
         $glyphFiles = [];
         foreach($glyphPaths as $prefixHex => $glyphPath){
-            $hash .= hash_file("md5", $glyphPath);
+            $hash .= $prefixHex . hash_file("md5", $glyphPath);
             $glyphFiles["font/glyph_$prefixHex.png"] = $glyphPath;
         }
 
         $uuid = hash("md5", $hash);
-        $cachePath = Path::join($this->cacheDir, "$uuid.zip");
+        $cachePath = Path::join($cacheDir, "$uuid.zip");
         if(is_file($cachePath)){
             return $cachePath;
         }
 
-        $archive = new \ZipArchive();
-        $archive->open($cachePath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
-        foreach($glyphFiles as $entryName => $glyphPath){
-            $archive->addFile($glyphPath, $entryName);
-            $archive->setCompressionName($entryName, \ZipArchive::CM_DEFLATE64);
+        if(!is_dir($cacheDir)){
+            throw new \RuntimeException("Cache directory does not exist : $cacheDir");
         }
 
-        $archive->addFromString("manifest.json", json_encode([
+        // Write to a temporary file first, so that an interrupted write never leaves a broken cache file
+        $tmpPath = "$cachePath.tmp";
+        $archive = new \ZipArchive();
+        if($archive->open($tmpPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true){
+            throw new \RuntimeException("Failed to create addon archive : $tmpPath");
+        }
+        $description = "Unicode font addon built automatically by Unicode FontLoader plug-in";
+        $ok = true;
+        foreach($glyphFiles as $entryName => $glyphPath){
+            $ok = $archive->addFile($glyphPath, $entryName) && $ok;
+        }
+
+        $ok = $archive->addFromString("manifest.json", json_encode([
             "format_version" => 2,
             "header" => [
                 "name" => "UnicodeFont",
-                "description" => "Unicode font addon built automatically by Unicode FontLoader plug-in",
+                "description" => $description,
                 "uuid" => Uuid::fromString($uuid)->toString(),
                 "version" => [1, 0, 0],
                 "min_engine_version" => [1, 20, 0]
             ],
             "modules" => [
                 [
-                    "description" => "Unicode font addon built automatically by Unicode FontLoader plug-in",
+                    "description" => $description,
                     "type" => "resources",
                     "uuid" => Uuid::fromString(hash("md5", $hash . "resources"))->toString(),
                     "version" => [1, 0, 0]
                 ]
             ]
-        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-        $archive->close();
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)) && $ok;
+
+        if(!$archive->close() || !$ok || !rename($tmpPath, $cachePath)){
+            @unlink($tmpPath);
+            throw new \RuntimeException("Failed to write addon archive : $cachePath");
+        }
 
         return $cachePath;
     }
@@ -327,8 +310,7 @@ final class Main extends PluginBase{
      *
      * @return string Two-character uppercase hex, zero-padded on the left.
      */
-    private static function padHexCode(string $hexCode) : string{
+    public static function padHexCode(string $hexCode) : string{
         return str_pad(strtoupper($hexCode), 2, "0", STR_PAD_LEFT);
     }
-
 }
