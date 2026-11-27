@@ -11,10 +11,10 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <img src="https://raw.githubusercontent.com/presentkim-pm/UnicodeFontLoader/main/assets/icon.png" alt="Logo" width="80" height="80">
+  <img src="https://raw.githubusercontent.com/presentkim-pm/unicodefontloader/main/assets/icon.png" alt="Logo" width="80" height="80">
   <h3>UnicodeFontLoader</h3>
   <p align="center">
-    An plugin that automatically load unicode font images and pack them into resourcepack!
+    A plugin that automatically loads unicode font images and packs them into a resource pack! (axolotl-pm/PocketMine-MP 5.x)
 
 [Contact to me][author-discord] · [Report a bug][issues-url] · [Request a feature][issues-url]
 
@@ -24,7 +24,7 @@
 
 <!-- ABOUT THE PROJECT -->
 
-## About The Project
+### Overview
 
 Ever felt bothered managing emoji fonts for the server?
 Or struggled finding emoji Unicode?
@@ -35,23 +35,19 @@ This plugin automatically bundles font files located in the `resource_packs/font
 > For detailed information about image fonts, please
 > visit [bedrock.dev/concepts/emojis](https://wiki.bedrock.dev/concepts/emojis.html)
 
-:heavy_check_mark: Automatically generates font resource pack based on character images (
-like `resource_packs/fonts/glyph_XX/YY.png`).    
-:heavy_check_mark: Registers the generated resource pack on the server  
-:heavy_check_mark: Separates and applies existing font glyph files (`glyph_**.png`) on `resource_packs/` directory.  
-:heavy_check_mark: All results are cached to optimize repetitive tasks
+- Automatically generates font resource pack based on character images (like `resource_packs/fonts/glyph_XX/YY.png`).
+- Registers the generated resource pack on the server (with [resourcepack-register](https://packagist.org/packages/presentkim/resourcepack-register)).
+- Separates and applies existing font glyph files (`glyph_**.png`) on `resource_packs/` directory.
+- All results are cached to optimize repetitive tasks.
+- No commands, permissions or configuration.
 
-##
-
------
-
-#### Usage
+### Usage
 
 1. When you apply the plugin and start the server, the default unicode font images are generated as examples in
    the `resource_packs/fonts` directory.
 2. If a file named `resource_packs/fonts/glyph_XX/YY.png` exists, it will automatically be applied as the font corresponding to
    Unicode `U+XXYY`.
-3. If you want to convert existing font files to fit the plugin, simply place the 'glyph_XX.png' file in the 'fonts'
+3. If you want to convert existing font files to fit the plugin, simply place the `glyph_XX.png` file in the `fonts`
    directory, and it will be automatically converted.
 
 The automatic conversion and build feature runs once when the server starts up.
@@ -62,11 +58,10 @@ The Unicode converter can be conveniently accessed
 via [bedrock.dev](https://wiki.bedrock.dev/concepts/emojis.html#hexValue)
 or [unicodeconverter.net](https://unicodeconverter.net/).
 
-
 > example) When server directory is configured as below,
 >
 > ```bash
-> . # pmmp directory
+> . # server directory
 > ├── resource_packs
 > │   └── fonts
 > |       ├── glyph_E0
@@ -78,103 +73,49 @@ or [unicodeconverter.net](https://unicodeconverter.net/).
 > │
 > └── ...
 > ```
->
-> In that case, the 'glyph_E3.png' file will automatically be split into 'glyph_E3/YY.png' and applied to the server.  
-> Additionally, the existing 'glyph_E3.png' file will be removed.
->
-> ```bash
-> . # pmmp directory
-> ├── resource_packs
-> │   └── fonts
-> |       ├── glyph_E0
-> |       |   ├──── 01.png
-> |       |   ├──── 0A.png
-> |       |   └──── ...
-> |       |
-> │       └─── glyph_E3
-> |       |   ├──── 0A.png
-> |       |   ├──── 0B.png
-> |       |   └──── ...
-> │
-> └── ...
-> ```
 
-##
+---
 
------
+### Installation & Requirements
 
-## TODO:
+- **Server**
+  - [axolotl-pm/PocketMine-MP](https://github.com/axolotl-pm/PocketMine-MP) `5.51` or higher (`plugin.yml` `api: [5.51.0]`),
+    which uses BedrockProtocol 64 (Bedrock `1.26.60`).
+  - PHP `8.4` or higher.
+  - PHP extensions `gd` and `zip`.
+- **Installation**
+  - Download `UnicodeFontLoader.phar` from [GitHub Releases][releases-url] and place it into your server's `plugins` directory.
+  - Restart the server; the plugin will load automatically according to `plugin.yml`.
+- **Old versions**
+  - The version for the original [pmmp/PocketMine-MP](https://github.com/pmmp/PocketMine-MP) `5.x` (up to `5.44`,
+    Poggit releases) is kept on the [`legacy/pmmp-5.44`](https://github.com/presentkim-pm/unicodefontloader/tree/legacy/pmmp-5.44) branch.
+- **Development**
+  - `composer install` then `composer test` runs the PHPUnit tests.
 
-- [ ] Supports linking resource pack to cdn urls
-- [ ] Create an html or markdown page that lists the registered image glyphs and provides a copy button.
-- [ ] Support for commands that register a unique name for each image font and make it available on chat
+---
 
-##
-
-## Target software:
-
-This plugin officially only works with [`Pocketmine-MP`](https://github.com/pmmp/PocketMine-MP/).
-
-##
-
------
-
-## Downloads
-
-### Download from [Github Releases][releases-url]
-
-[![Github Downloads][release-badge]][releases-url]
-
-##
-
------
-
-## Installation
-
-1) Download plugin `.phar` releases
-2) Move downloaded `.phar` file to server's **/plugins/** folder
-3) Restart the server
-
-##
-
------
-
-## License
+### License
 
 Distributed under the **LGPL 3.0**. See [LICENSE][license-url] for more information
-
-##
 
 -----
 
 [author-discord]: https://discordapp.com/users/345772340279508993
 
-[poggit-ci-badge]: https://poggit.pmmp.io/ci.shield/presentkim-pm/UnicodeFontLoader/UnicodeFontLoader?style=for-the-badge
+[version-badge]: https://img.shields.io/github/v/release/presentkim-pm/unicodefontloader?display_name=tag&style=for-the-badge&label=VERSION
 
-[poggit-version-badge]: https://poggit.pmmp.io/shield.api/UnicodeFontLoader?style=for-the-badge
+[release-badge]: https://img.shields.io/github/downloads/presentkim-pm/unicodefontloader/total?style=for-the-badge&label=GITHUB%20
 
-[poggit-downloads-badge]: https://poggit.pmmp.io/shield.dl.total/UnicodeFontLoader?style=for-the-badge
+[stars-badge]: https://img.shields.io/github/stars/presentkim-pm/unicodefontloader.svg?style=for-the-badge
 
-[version-badge]: https://img.shields.io/github/v/release/presentkim-pm/UnicodeFontLoader?display_name=tag&style=for-the-badge&label=VERSION
+[license-badge]: https://img.shields.io/github/license/presentkim-pm/unicodefontloader.svg?style=for-the-badge
 
-[release-badge]: https://img.shields.io/github/downloads/presentkim-pm/UnicodeFontLoader/total?style=for-the-badge&label=GITHUB%20
+[stars-url]: https://github.com/presentkim-pm/unicodefontloader/stargazers
 
-[stars-badge]: https://img.shields.io/github/stars/presentkim-pm/UnicodeFontLoader.svg?style=for-the-badge
+[releases-url]: https://github.com/presentkim-pm/unicodefontloader/releases
 
-[license-badge]: https://img.shields.io/github/license/presentkim-pm/UnicodeFontLoader.svg?style=for-the-badge
+[issues-url]: https://github.com/presentkim-pm/unicodefontloader/issues
 
-[poggit-ci-url]: https://poggit.pmmp.io/ci/presentkim-pm/UnicodeFontLoader/UnicodeFontLoader
+[license-url]: https://github.com/presentkim-pm/unicodefontloader/blob/main/LICENSE
 
-[poggit-release-url]: https://poggit.pmmp.io/p/UnicodeFontLoader
-
-[stars-url]: https://github.com/presentkim-pm/UnicodeFontLoader/stargazers
-
-[releases-url]: https://github.com/presentkim-pm/UnicodeFontLoader/releases
-
-[issues-url]: https://github.com/presentkim-pm/UnicodeFontLoader/issues
-
-[license-url]: https://github.com/presentkim-pm/UnicodeFontLoader/blob/main/LICENSE
-
-[project-icon]: https://raw.githubusercontent.com/presentkim-pm/UnicodeFontLoader/main/assets/icon.png
-
-[project-preview]: https://raw.githubusercontent.com/presentkim-pm/UnicodeFontLoader/main/assets/preview.gif
+[project-icon]: https://raw.githubusercontent.com/presentkim-pm/unicodefontloader/main/assets/icon.png
